@@ -4,10 +4,10 @@
 # This script will backup the PowerCenter Domain to
 # $INFA_SHARED/Backup folder
 #
-# Created by: Keshav Vadrevu, IPS
-# Created on: March 22, 2011
-# Modified by: Vijayanand Silvary
-# Modified on: October 3, 2011
+# Created by: Chiranjeevulu GORAKALA
+# Created on: March 24, 2020
+# Modified by: -
+# Modified on: -
 #...............................................................
 RUN_USER=`whoami`
 if [ $RUN_USER = 'infaadmn' ] ; then
