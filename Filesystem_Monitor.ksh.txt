@@ -1,0 +1,213 @@
+#!/bin/ksh
+#set -xv
+
+################################################################################
+##
+##      Filesystem_Monitor.ksh --
+##
+################################################################################
+VERSION="Filesystem_Monitor.ksh v1.00 09/28/2012"
+## Doug Huser 09/28/2012 - new
+################################################################################
+##  All functions for Filesystem_Monitor.ksh should be placed here
+################################################################################
+
+################################################################################
+##
+################################################################################
+CHECK_FOR_FULL_FS()
+{
+
+echo "Running CHECK_FOR_FULL_FS"
+
+df -Ph |grep -v Filesystem|while read DEV SIZE USED FREE PCT MNT
+do
+  PCT=`echo $PCT |sed "s/%//g"`
+  if [[ $V_PATH = $MNT ]]
+  then
+     echo "Excluding $MNT"
+     echo
+  else
+     echo "Checking $MNT - ${PCT}%"
+     echo
+     if [[ $PCT -gt $V_C_PCT ]]
+     then
+        echo "(CRITICAL) - $MNT is at ${PCT}% on Server $SERVER which is > ${V_C_PCT}% full. There is $FREE still available out of $SIZE.  Please resolve asap!!!"
+        echo "(CRITICAL) - $MNT is at ${PCT}% on Server $SERVER which is > ${V_C_PCT}% full. There is $FREE still available out of $SIZE.  Please resolve asap!!!" >/tmp/FS_alert
+        echo
+        cat /tmp/FS_alert | mail -s "CRITICAL - Filesystem Alert for $MNT on Server $SERVER." $CRITICAL_MAIL_LIST
+##         /nz/support/bin/SendEvent -to $CRITICAL_MAIL_LIST -subject "CRITICAL - Filesystem Alert for $MNT on Server $SERVER." -bodyFile /tmp/FS_alert
+        rm /tmp/FS_alert
+        continue
+     fi
+     if [[ $PCT -gt $V_W_PCT ]]
+     then
+        echo "(WARNING) - $MNT is at ${PCT}% on Server $SERVER which is > ${V_W_PCT}% full. There is $FREE still available out of $SIZE.  Please investigate!!!"
+        echo "(WARNING) - $MNT is at ${PCT}% on Server $SERVER which is > ${V_W_PCT}% full. There is $FREE still available out of $SIZE.  Please investigate!!!" >/tmp/FS_alert
+        echo
+        cat /tmp/FS_alert | mail -s "WARNING - Filesystem Alert for $MNT on Server $SERVER." $WARNING_MAIL_LIST
+##         /nz/support/bin/SendEvent -to $WARNING_MAIL_LIST -subject "WARNING - Filesystem Alert for $MNT on Server $SERVER." -bodyFile /tmp/FS_alert
+        rm /tmp/FS_alert
+     fi
+  fi
+done
+
+}
+################################################################################
+##
+################################################################################
+CLEANUP()
+{
+
+echo "#############################################################################################"
+echo "# Running CLEANUP "
+echo "#############################################################################################"
+echo
+
+find ${LOGS}/ -iname "Filesystem_Monitor*log" -mtime +7 -exec rm -f {} \;
+find ${LOGS}/ -iname "Filesystem_Montor*log" -mtime +7 -exec rm -f {} \;
+
+}
+################################################################################
+################################################################################
+################################################################################
+##################################### MAIN #####################################
+################################################################################
+################################################################################
+################################################################################
+
+PGMDIR=$(cd $(dirname $(whence $0)); pwd)
+
+Usage="\n
+
+Description: This script will monitor all filesystems on a server and notify you when any \n
+             filesystem is greater that the % supplied in the parameter.\n\n
+(Version: $VERSION)\n
+\n
+Usage: $(basename $0) [ -X ] [ -W ] [ -C ] \n
+
+where:\n
+        \t-X    Exclude. If you specify a filesystem here, it will not be checked.  If more than 1, delimit with commas "," \n
+        \t\tExample (-X /tmp)\n
+        \t-W    (NUMERIC) WARNING Percent to monitor for.\n
+        \t\tExample (-W 80)   (WARNING Notifications will be sent when ANY filesystem exceeds 80%.)\n
+        \t-C    (NUMERIC) CRITICAL Percent to monitor for.\n
+        \t\tExample (-C 90)   (CRITICAL Notifications will be sent when ANY filesystem exceeds 90%.)\n
+\n
+Examples: \n\n
+\tRun to script to check for filesystems that are > 80% full.  Also Ignore checking the /opt filesystem\n
+\t\t./Filesystem_Monitor.ksh -W 80 -C 90 -X /opt \n
+"
+
+################################################################################
+# Write error message and exit.
+OnError()  { # $* = message to write
+
+        echo "\n$*\n" >&2
+        exit 1
+}
+
+################################################################################
+## Process command line arguments
+unset ERR
+
+# Interrogate Input parameters.
+if (($# > 1))
+  then
+    while  getopts :LX:W:C: cmdopts
+    do
+        case $cmdopts in
+          L)    INT_LOG=Y ;;
+          X)    V_PATH=`echo $OPTARG` ;;
+          W)    V_W_PCT=`echo $OPTARG` ;;
+          C)    V_C_PCT=`echo $OPTARG` ;;
+          \?)   echo "\"-$OPTARG\" is not a valid switch" >&2
+                sleep 5 ;
+                print $Usage ;
+                exit 1 ;;
+        esac
+    done
+else
+  print $Usage
+  exit 1
+fi
+
+## . /export/home/nz/nz.config
+. /home/infaadmn/nz.config
+
+SERVER=`hostname`
+## MAIL_LIST='douglas.huser@timewarner.com,Obchinetz,Robert.Obchinetz@timewarner.com,TWDAINFSupport@timewarner.com'
+## WARNING_MAIL_LIST='douglas.huser@timewarner.com,aaron.lima@timewarner.com'
+## WARNING_MAIL_LIST='TWDAINFSupport@timewarner.com,TWEngineeringandSupport@timewarner.com,douglas.huser@timewarner.com'
+WARNING_MAIL_LIST='kumara.made@timewarner.com,douglas.huser@timewarner.com'
+## CRITICAL_MAIL_LIST='douglas.huser@timewarner.com,aaron.lima@timewarner.com'
+## CRITICAL_MAIL_LIST='TWDAINFSupport@timewarner.com,TWEngineeringandSupport@timewarner.com,douglas.huser@timewarner.com'
+CRITICAL_MAIL_LIST='TWDAINFSupport@timewarner.com,douglas.huser@timewarner.com'
+## CRITICAL_MAIL_LIST='dhuser@att.blackberry.net'
+
+## # Set date parameters.
+TME_STMP=`date +%Y%m%d_%H%M`
+
+# Direct output to log file if parm -L was provided.
+if [[ $INT_LOG = 'Y' ]]
+then
+   ERROR_LOG=$LOGS/Filesystem_Monitor_${TME_STMP}.log
+   exec 1>> ${ERROR_LOG} 2>&1
+fi
+
+# Validate for Numeric Warning Percent value for -W parameter.
+if [[ ! -z $V_W_PCT ]]
+then
+   echo "V_W_PCT = $V_W_PCT"
+   case $V_W_PCT in
+      +([0-9])*(.)*([0-9]) ) echo "V_W_PCT passed number test";echo >&2;;
+      *) echo "V_W_PCT is not Numeric.  Please supply a numeric value." ;
+         sleep 5 ;
+         print $Usage ;
+         exit 1 ;;
+   esac
+else
+   echo "V_W_PCT NOT POPULATED"
+   echo
+   sleep 5
+   print $Usage
+   exit 1
+fi
+
+# Validate for Numeric Critical Percent value for -C parameter.
+if [[ ! -z $V_C_PCT ]]
+then
+   echo "V_C_PCT = $V_C_PCT"
+   case $V_C_PCT in
+      +([0-9])*(.)*([0-9]) ) echo "V_C_PCT passed number test";echo >&2;;
+      *) echo "V_C_PCT is not Numeric.  Please supply a numeric value." ;
+         sleep 5 ;
+         print $Usage ;
+         exit 1 ;;
+   esac
+else
+   echo "V_C_PCT NOT POPULATED"
+   echo
+   sleep 5
+   print $Usage
+   exit 1
+fi
+
+if [ -z $V_PATH ]
+then
+   echo "There are no Exclusions for this run"
+   echo
+else
+   V_PATH=`echo $V_PATH |sed "s/,/ /g"`
+   echo "Exclusions = $V_PATH"
+   echo
+fi
+
+CHECK_FOR_FULL_FS
+CLEANUP
+
+exit
+
+################################################################################
+##  end of File_Cleanup.ksh
+################################################################################

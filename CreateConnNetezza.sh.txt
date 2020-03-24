@@ -1,0 +1,162 @@
+if [ $# -ne "5" ];
+then
+   echo "Usage : $0 <DBUSERNAME> <DBPASSWD> <DBNAME> <FOLDERNAME> <your FIRST NAME>"
+   echo "For example: $0 <sungarduser> <sungardpass> <sungard> <SunGard> <Vijay>"
+exit 2
+fi
+
+
+
+USERNAME=$1
+PASSWORD=$2
+DBNAME=$3
+FOLDERNAME=$4
+YOUR_FIRST_NAME=$5
+timestamp=`date +%m%d%Y`
+TEMPFILE=$INFA_SHARED/$DBNAME.$timestamp
+ODBCFILE=$HOME/.odbc.ini
+UPPER_DBNAME=`echo $DBNAME | tr "[a-z]" "[A-Z]"`
+CONNECTIONNAME=NTZ_$UPPER_DBNAME
+CONNECTSTRING=$UPPER_DBNAME
+
+GROUP_DBA=DBA_Group
+GROUP_RM=Release_Managers
+var1="_Developers"
+GROUP_DEV=$FOLDERNAME$var1
+var2="_Support"
+GROUP_SUP=$FOLDERNAME$var2
+DBSERVER=10.144.152.47
+DBPORT=5480
+echo "please verify the information, you got 1 minute. If it is incorrect, press Control C or Z else sit back and watch the screen"
+
+echo "DBUSERNAME:$USERNAME , DBPASSWD:$PASSWORD , DBNAME:$DBNAME , FOLDERNAME:$FOLDERNAME , FIRST NAME:$YOUR_FIRST_NAME"
+sleep 60
+
+echo "Time's up"
+var=`cat $ODBCFILE | grep $CONNECTSTRING`
+var2=[$CONNECTSTRING]
+if [ "$var" != "$var2" ] ; then
+echo " " > $TEMPFILE
+echo "#Added by $YOUR_FIRST_NAME $timestamp"  >> $TEMPFILE
+echo "[$CONNECTSTRING]"  >> $TEMPFILE
+echo "Driver= /apps/informatica/nz/lib64/libnzodbc.so" >> $TEMPFILE
+echo "Description           = NetezzaSQL ODBC" >> $TEMPFILE
+echo "Servername            = $DBSERVER" >> $TEMPFILE
+echo "Port                  = $DBPORT" >> $TEMPFILE
+echo "Database              = $DBNAME" >> $TEMPFILE
+echo "Username              = guest" >> $TEMPFILE
+echo "Password              = password" >> $TEMPFILE
+echo "ReadOnly              = false" >> $TEMPFILE
+echo "ShowSystemTables      = false"  >> $TEMPFILE
+echo "LegacySQLTables       = false"  >> $TEMPFILE
+echo "LoginTimeout          = 0"  >> $TEMPFILE
+echo "QueryTimeout          = 0"  >> $TEMPFILE
+echo "DateFormat            = 1"  >> $TEMPFILE
+echo "NumericAsChar         = false"  >> $TEMPFILE
+echo "SQLBitOneZero         = false"  >> $TEMPFILE
+echo "StripCRLF             = false"  >> $TEMPFILE
+echo "securityLevel         = preferredUnSecured"  >> $TEMPFILE
+echo "caCertFile            ="  >> $TEMPFILE
+
+cat $TEMPFILE >> $ODBCFILE
+if [ $? = 0 ];
+then
+echo "$CONNECTSTRING DSN successfully added to .odbc.ini file"
+else
+echo "Failed to add $CONNECTSTRING DSN to .odbc.ini file"
+exit 1
+fi
+rm $TEMPFILE
+
+fi
+
+var3=`cat $ODBCFILE | grep $CONNECTSTRING`
+var4=[$CONNECTSTRING]
+if [ "$var3" = "$var4" ] ; then
+
+#-------------------------------------------------------------------#
+# Connecting to Repository
+#-------------------------------------------------------------------#
+
+echo "Connecting to Repository"
+
+pmrep connect -r $INFA_PCREP -d $INFA_DOMAIN -n $INFA_MAINTENANCE_USER -s $INFA_SEC_DOMAIN -x $INFA_MAINTENANCE_PASS
+
+if [ $? = 0 ];
+then
+echo "Connected to Repository Successfull"
+else
+echo "Failed to Connect to Repository"
+exit 1
+fi
+#-------------------------------------------------------------------#
+# Creating Relational Connection
+#-------------------------------------------------------------------#
+echo "Creation of Relational Connection"
+
+pmrep createconnection -s "Netezza" -n $CONNECTIONNAME -u $USERNAME -p $PASSWORD -c $CONNECTSTRING -l "UTF-8"
+
+if [ $? = 0 ];
+then
+echo "$CONNECTIONNAME Created Successfully"
+pmrep ChangeOwner -o CONNECTION -n $CONNECTIONNAME -u Administrator
+else
+echo "$CONNECTIONNAME Creation Failed. Check the log for more information"
+exit 1
+fi
+
+
+#-------------------------------------------------------------------#
+# Assigning Group  & Permissions to the Relational Connection
+#-------------------------------------------------------------------#
+
+echo "Assigning $GROUP_DEV Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_DEV -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_DEV Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_DEV to connection $CONNECTIONNAME"
+exit 1
+fi
+
+echo "Assigning $GROUP_SUP Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_SUP -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_SUP Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_SUP to connection $CONNECTIONNAME"
+exit 1
+fi
+
+echo "Assigning $GROUP_RM Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_RM -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_RM Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_RM to connection $CONNECTIONNAME"
+exit 1
+fi
+
+echo "Assigning $GROUP_DBA Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_DBA -p r
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_DBA Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_DBA to connection $CONNECTIONNAME"
+exit 1
+fi
+
+fi
+exit 0

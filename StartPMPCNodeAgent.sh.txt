@@ -1,0 +1,2 @@
+cd /apps/informatica/PMPCNodeAgent/nodeagent
+nodeagent.sh start

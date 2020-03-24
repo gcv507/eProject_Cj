@@ -1,0 +1,193 @@
+if [ $# -ne "6" ];
+then
+   echo "Usage : $0 <DBUSERNAME> <DBPASSWD> <DBNAME> <DBSERVERNAME> <FOLDERNAME> <your FIRST NAME>"
+   echo "For example: $0 <sungarduser> <sungardpass> <sungard> <dbsungard.dev.twi.com> <SunGard> <Vijay>"
+exit 2
+fi
+
+
+
+USERNAME=$1
+PASSWORD=$2
+DBNAME=$3
+DBSERVER=$4
+FOLDERNAME=$5
+YOUR_FIRST_NAME=$6
+timestamp=`date +%m%d%Y`
+TEMPFILE=$INFA_SHARED/Temp/$DBNAME.$timestamp
+ODBCFILE=$HOME/.odbc.ini
+UPPER_DBNAME=`echo $DBNAME | tr "[a-z]" "[A-Z]"`
+CONNECTIONNAME=SQL_$UPPER_DBNAME
+CONNECTSTRING=$UPPER_DBNAME
+
+GROUP_DBA=DBA_Group
+GROUP_RM=Release_Managers
+var1="_Developers"
+GROUP_DEV=$FOLDERNAME$var1
+var2="_Support"
+GROUP_SUP=$FOLDERNAME$var2
+
+echo "please verify the information, you got 1 minute. If it is incorrect, press Control C or Z else sit back and watch the screen"
+
+echo "DBUSERNAME:$USERNAME , DBPASSWD:$PASSWORD , DBNAME:$DBNAME , DBSERVERNAME:$DBSERVER , FOLDERNAME:$FOLDERNAME , FIRST NAME:$YOUR_FIRST_NAME"
+sleep 60
+
+echo "Time's up"
+var=`cat $ODBCFILE | grep $CONNECTSTRING`
+var2=[$CONNECTSTRING]
+if [ "$var" != "$var2" ] ; then
+
+echo " " > $TEMPFILE
+echo "#Added by $YOUR_FIRST_NAME $timestamp"  >> $TEMPFILE
+echo "[$CONNECTSTRING]"  >> $TEMPFILE
+echo "Driver=/apps/informatica/910/ODBC6.1/lib/DWmsss25.so"  >> $TEMPFILE
+echo "Description=DataDirect 6.1 SQL Server Native Wire Protocol"  >> $TEMPFILE
+echo "Address=$DBSERVER"  >> $TEMPFILE
+echo "AlternateServers="  >> $TEMPFILE
+echo "AlwaysReportTriggerResults=0"  >> $TEMPFILE
+echo "AnsiNPW=1"  >> $TEMPFILE
+echo "ApplicationName="  >> $TEMPFILE
+echo "ApplicationUsingThreads=1"  >> $TEMPFILE
+echo "AuthenticationMethod=1"  >> $TEMPFILE
+echo "BulkBinaryThreshold=32"  >> $TEMPFILE
+echo "BulkCharacterThreshold=-1"  >> $TEMPFILE
+echo "BulkLoadBatchSize=1024"  >> $TEMPFILE
+echo "BulkLoadOptions=2"  >> $TEMPFILE
+echo "ConnectionReset=0"  >> $TEMPFILE
+echo "ConnectionRetryCount=0"  >> $TEMPFILE
+echo "ConnectionRetryDelay=3"  >> $TEMPFILE
+echo "Database=$DBNAME"  >> $TEMPFILE
+echo "EnableBulkLoad=0"  >> $TEMPFILE
+echo "EnableQuotedIdentifiers=0"  >> $TEMPFILE
+echo "EncryptionMethod=0"  >> $TEMPFILE
+echo "FailoverGranularity=0"  >> $TEMPFILE
+echo "FailoverMode=0"  >> $TEMPFILE
+echo "FailoverPreconnect=0"  >> $TEMPFILE
+echo "FetchTSWTZasTimestamp=0"  >> $TEMPFILE
+echo "FetchTWFSasTime=1"  >> $TEMPFILE
+echo "GSSClient=native"  >> $TEMPFILE
+echo "#HostName=<SQL_Server_host>"  >> $TEMPFILE
+echo "HostNameInCertificate="  >> $TEMPFILE
+echo "InitializationString="  >> $TEMPFILE
+echo "Language="  >> $TEMPFILE
+echo "LoadBalanceTimeout=0"  >> $TEMPFILE
+echo "LoadBalancing=0"  >> $TEMPFILE
+echo "LoginTimeout=15"  >> $TEMPFILE
+echo "LogonID="  >> $TEMPFILE
+echo "MaxPoolSize=100"  >> $TEMPFILE
+echo "MinPoolSize=0"  >> $TEMPFILE
+echo "PacketSize=-1"  >> $TEMPFILE
+echo "Password="  >> $TEMPFILE
+echo "Pooling=0"  >> $TEMPFILE
+echo "#PortNumber=<SQL_Server_server_port>"  >> $TEMPFILE
+echo "QueryTimeout=0"  >> $TEMPFILE
+echo "ReportCodePageConversionErrors=0"  >> $TEMPFILE
+echo "SnapshotSerializable=0"  >> $TEMPFILE
+echo "TrustStore="  >> $TEMPFILE
+echo "TrustStorePassword="  >> $TEMPFILE
+echo "ValidateServerCertificate=1"  >> $TEMPFILE
+echo "WorkStationID="  >> $TEMPFILE
+echo "XML Describe Type=-10"  >> $TEMPFILE
+
+cat $TEMPFILE >> $ODBCFILE
+if [ $? = 0 ];
+then
+echo "$CONNECTSTRING DSN successfully added to .odbc.ini file"
+else
+echo "Failed to add $CONNECTSTRING DSN to .odbc.ini file"
+exit 1
+fi
+rm $TEMPFILE
+fi
+
+var3=`cat $ODBCFILE | grep $CONNECTSTRING`
+var4=[$CONNECTSTRING]
+if [ "$var3" = "$var4" ] ; then
+
+#-------------------------------------------------------------------#
+# Connecting to Repository
+#-------------------------------------------------------------------#
+
+echo "Connecting to Repository"
+
+pmrep connect -r $INFA_PCREP -d $INFA_DOMAIN -n $INFA_MAINTENANCE_USER -s $INFA_SEC_DOMAIN -x $INFA_MAINTENANCE_PASS
+
+if [ $? = 0 ];
+then
+echo "Connected to Repository Successfull"
+else
+echo "Failed to Connect to Repository"
+exit 1
+fi
+#-------------------------------------------------------------------#
+# Creating Relational Connection
+#-------------------------------------------------------------------#
+echo "Creation of Relational Connection"
+
+pmrep createconnection -s "ODBC" -n $CONNECTIONNAME -u $USERNAME -p $PASSWORD -c $CONNECTSTRING -l "UTF-8"
+
+if [ $? = 0 ];
+then
+echo "$CONNECTIONNAME Created Successfully"
+pmrep ChangeOwner -o CONNECTION -n $CONNECTIONNAME -u Administrator
+else
+echo "$CONNECTIONNAME Creation Failed. Check the log for more information"
+exit 1
+fi
+
+
+#-------------------------------------------------------------------#
+# Assigning Group  & Permissions to the Relational Connection
+#-------------------------------------------------------------------#
+
+echo "Assigning $GROUP_DEV Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_DEV -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_DEV Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_DEV to connection $CONNECTIONNAME"
+exit 1
+fi
+
+echo "Assigning $GROUP_SUP Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_SUP -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_SUP Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_SUP to connection $CONNECTIONNAME"
+exit 1
+fi
+
+
+echo "Assigning $GROUP_RM Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_RM -p rx
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_RM Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_RM to connection $CONNECTIONNAME"
+exit 1
+fi
+
+echo "Assigning $GROUP_DBA Group to connection $CONNECTIONNAME"
+
+pmrep AssignPermission  -o CONNECTION -n $CONNECTIONNAME -g $GROUP_DBA -p r
+
+if [ $? = 0 ];
+then
+echo "Group $GROUP_DBA Assigned Successfully to connection $CONNECTIONNAME"
+else
+echo "Failed to Assign Group $GROUP_DBA to connection $CONNECTIONNAME"
+exit 1
+fi
+
+fi
+exit 0

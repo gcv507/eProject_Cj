@@ -1,0 +1,15 @@
+TMPAPPNAME=`echo "abc" |   tr "[:lower:]" "[:upper:]"`
+echo "" >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_SRC=$INFA_SHARED/'"abc"'/SrcFiles/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_TGT=$INFA_SHARED/'"abc"'/TgtFiles/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_LKP=$INFA_SHARED/'"abc"'/LkpFiles/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_BAD=$INFA_SHARED/'"abc"'/BadFiles/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_SLOG=$INFA_SHARED/'"abc"'/SessLogs/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_WLOG=$INFA_SHARED/'"abc"'/WorkflowLogs/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_SH=$INFA_SHARED/'"abc"'/Scripts/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_PARAM=$INFA_SHARED/'"abc"'/ParamFiles/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_CACHE=$INFA_SHARED/'"abc"'/Cache/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_TEMP=$INFA_SHARED/'"abc"'/Temp/' >> ~/.app_profile
+echo 'export '"$TMPAPPNAME"'_STORE=$INFA_SHARED/'"abc"'/Storage/' >> ~/.app_profile
+
+unset TMPAPPNAME

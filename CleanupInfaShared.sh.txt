@@ -1,0 +1,10 @@
+#!/bin/ksh
+find $INFA_SHARED/WorkflowLogs -name "*.log*" -mtime \+15 -exec rm -f {} \;
+file="$INFA_SHARED/AdminScripts/ProjectFolderNames.txt"
+while read line
+do
+        find $INFA_SHARED/$line/SessLogs -name "*.log*" -mtime \+30 -exec rm -f {} \;
+        find $INFA_SHARED/$line/Cache -name "*.dat*" -mtime \+30 -exec rm -f {} \;
+        find $INFA_SHARED/$line/Cache -name "*.idx*" -mtime \+30 -exec rm -f {} \;
+done <"$file"
+exit 0

@@ -1,0 +1,36 @@
+#...............................................................
+# Truncate logs
+#
+# This script will truncate logs older than 60 days
+#
+# Created by: Venugopal Chennupati
+# Created on: November 15, 2013
+# Modified by:
+# Modified on:
+#...............................................................
+
+RUN_USER=`whoami`
+if [ $RUN_USER = 'infaadmn' ] ; then
+temp_var=1
+else
+echo "Warning!! You cannot execute this script with the current user. Please login as infaadmn and execute this script"
+exit -1
+fi
+
+echo "Connecting to REP_Dev_TWDIP"
+
+pmrep connect -r $INFA_PCREP -d $INFA_DOMAIN -n $INFA_MAINTENANCE_USER -x $INFA_MAINTENANCE_PASS
+
+echo "Truncating logs"
+
+pmrep truncatelog  -t 30
+
+
+RC=$?
+if [ $RC != 0 ] ; then
+echo "Truncating logs process has failed" | mailx -s "Alert! Informatica Dev TRUNCATE LOGS failed" Bhargav.Aswatha@timewarner.com
+fi
+
+pmrep cleanup
+
+exit 0

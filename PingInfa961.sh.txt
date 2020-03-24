@@ -1,0 +1,30 @@
+#...............................................................
+# Ping Informatica 9.6.1 Services
+#
+# Created by: Keshav Vadrevu, IPS
+# Created on: March 22, 2011
+#...............................................................
+
+# Display PowerCenter Version first
+pmrep version
+
+echo "
+...............................................................
+"
+infacmd.sh ping -dn $INFA_DOMAIN
+OUT=`expr $?`
+
+echo ""
+infacmd.sh ping -dn $INFA_DOMAIN -sn $INFA_PCREP
+OUT=`expr $OUT + $?`
+
+infacmd.sh ping -dn $INFA_DOMAIN -sn $INFA_PCIS
+OUT=`expr $OUT + $?`
+
+echo "
+...............................................................
+"
+
+exit $OUT
+~
+~

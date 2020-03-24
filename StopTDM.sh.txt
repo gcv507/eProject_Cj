@@ -1,0 +1,6 @@
+# Stop TDM service
+
+echo "Stoping TDM Service"
+cd $TDM_HOME
+stopILM.sh
+exit 0

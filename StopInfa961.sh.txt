@@ -1,0 +1,17 @@
+#.......................................
+# Stop Informatica 9.6.1 Services
+#
+# Created by: Keshav Vadrevu, IPS
+# Created on: March 22, 2011
+#.......................................
+
+RUN_USER=`whoami`
+if [ $RUN_USER = 'infaadmn' ] ; then
+temp_var=1
+else
+echo "Warning!! You cannot execute this script with the current user. Please login as infaadmn and execute this script"
+exit -1
+fi
+
+cd $INFA_HOME/tomcat/bin
+infaservice.sh shutdown

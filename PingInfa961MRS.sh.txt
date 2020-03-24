@@ -1,0 +1,30 @@
+#...............................................................
+# Ping Informatica 9.6.1 Integration Services for Model Repository
+#
+# Created by: Yokilamai Jeyachandran
+# Created on: March 13, 2013
+# Purpose: To be called by Oracle EM UDM
+#...............................................................
+
+INFA_HOME=/apps/informatica/infa_bin/961
+INFA_DOMAIN=Domain_Dev_TWDIP
+INFA_SERVICE=MRS_Dev_TWDIP
+INFA_TIMEOUT=180
+MESSAGE_UP="Informatica Integration Service for Model Repository is Up"
+MESSAGE_DOWN="Informatica Integration Service for Model Repository is Down"
+
+#$INFA_HOME/server/bin/pmrep version
+
+echo ""
+$INFA_HOME/isp/bin/infacmd.sh ping -dn $INFA_DOMAIN -sn $INFA_SERVICE -re $INFA_TIMEOUT
+
+OUT=`expr $?`
+
+if [ "$OUT" -eq 0 ]; then
+        echo -e "em_result=$OUT\nem_message=$MESSAGE_UP \n"
+else
+        echo -e "em_result=$OUT\nem_message=$MESSAGE_DOWN\n"
+fi
+
+exit
+

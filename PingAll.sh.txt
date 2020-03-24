@@ -1,0 +1,10 @@
+#.......................................
+# Ping ALL processes in right order
+#
+# Created by: Keshav Vadrevu, IPS
+# Created on: March 22, 2011
+#.......................................
+
+clear
+cd $ADMIN_HOME
+PingInfa961.sh

@@ -1,0 +1,33 @@
+#...............................................................
+# Ping Informatica 9.6.1 Services
+#
+# Created by: Shailesh Khanal
+# Created on: May 05, 2011
+# Purpose: To be consumed by Oracle Enterprise Grid UDM
+#...............................................................
+
+# Display PowerCenter Version first
+INFA_HOME=/apps/informatica/infa_bin/961
+INFA_DOMAIN=Domain_Dev_TWDIP
+INFA_NODE=Node_CDL-APP002150
+INFA_HOST=twinfadev.dev.twi.com
+INFA_TIMEOUT=180
+
+#$INFA_HOME/server/bin/pmrep version
+
+echo "
+...............................................................
+"
+$INFA_HOME/isp/bin/infacmd.sh ping -dn $INFA_DOMAIN -nn $INFA_NODE -re $INFA_TIMEOUT
+OUT=`expr $?`
+
+echo "
+...............................................................
+"
+if [ "$OUT" -eq 0 ]; then
+        echo -e "em_result=$OUT\nem_message=Informatica Node $INFA_NODE in Domain $INFA_DOMAIN is Up on $INFA_HOST\n"
+else
+        echo -e "em_result=$OUT\nem_message=Informatica Node $INFA_NODE in Domain $INFA_DOMAIN is Down on $INFA_HOST\n"
+fi
+
+exit

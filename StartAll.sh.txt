@@ -1,0 +1,25 @@
+#.......................................
+# Start ALL processes in right order
+#
+# Created by: Keshav Vadrevu, IPS
+# Created on: March 22, 2011
+#.......................................
+
+RUN_USER=`whoami`
+if [ $RUN_USER = 'infaadmn' ] ; then
+temp_var=1
+else
+echo "Warning!! You cannot execute this script with the current user. Please login as infaadmn and execute this script"
+exit -1
+fi
+
+clear
+echo "
+Starting PowerCenter Services. Please wait...
+"
+
+cd $ADMIN_HOME
+StartInfa961.sh
+
+#sleep 90
+#StartTDM.sh

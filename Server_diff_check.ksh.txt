@@ -1,0 +1,340 @@
+#!/bin/ksh
+################################################################################
+##
+##      Server_diff_check.ksh --
+##
+################################################################################
+VERSION="Server_diff_check.ksh v1.00 02/28/2013"
+## huserd 02/28/2013 - new
+################################################################################
+################################################################################
+##  All functions for Server_diff_check.ksh should be placed here
+################################################################################
+################################################################################
+
+################################################################################
+##
+################################################################################
+CHECK_FOR_NETEZZA_DIFFERENCES()
+{
+
+echo '***********************************************************************************'
+echo "Check for differences in the Netezza Configuration"
+echo '***********************************************************************************'
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+CHECK_FOR_INFORMATICA_DIFFERENCES()
+{
+
+echo '***********************************************************************************'
+echo "Check for differences in the Informatica Configuration"
+echo '***********************************************************************************'
+
+echo
+
+}
+################################################################################
+##  SET_ENVIRONMENT_VARIABLES
+################################################################################
+SET_ENVIRONMENT_VARIABLES()
+{
+
+TME_STMP=`date +%Y%m%d_%H%M`
+
+SERVER=`hostname`
+
+## MAILNOTIFY='douglas.huser@timewarner.com'
+##MAILNOTIFY='twdainfalerts@timewarner.com,douglas.huser@timewarner.com,kevin.graham@timewarner.com,manish.gupta@timewarner.com'
+MAILNOTIFY='vamsi.pothuganti@timewarner.com,bhargav.aswatha@timewarner.com,malavarman.mani@timewarner.com'
+
+if [[ $V_TYP = 'NETEZZA' ]]
+then
+   TEMPMAIL="$LOGS/server_diff_check_${SERVER}.tempmail"
+   SVR_REBOOT_CHK_LOG="$LOGS/server_diff_check_${SERVER}_${TME_STMP}.log"
+else
+   TEMPMAIL="$LOGS/server_diff_check_${SERVER}.tempmail"
+   SVR_REBOOT_CHK_LOG="$LOGS/server_diff_check_${SERVER}_${TME_STMP}.log"
+fi
+
+> $TEMPMAIL
+> $SVR_REBOOT_CHK_LOG
+
+echo $SVR_REBOOT_CHK_LOG
+
+echo "SERVER is $SERVER"
+echo "Tempmail file is $TEMPMAIL"
+echo "MailNotify is $MAILNOTIFY"
+echo
+
+}
+################################################################################
+##
+################################################################################
+GET_CPU_COUNT()
+{
+
+echo '***********************************************************************************'
+echo "Get the count of CPUs on this node"
+echo '***********************************************************************************'
+
+CPU_CNT=`cat /proc/cpuinfo |grep processor |wc -l`
+##     CPU_CNT=1
+echo "CPU count for server $SERVER is $CPU_CNT."
+echo "CPU count for server $SERVER is $CPU_CNT." >> $SVR_REBOOT_CHK_LOG
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+GET_MEMORY()
+{
+
+echo '***********************************************************************************'
+echo "Get the total amount of RAM on this node"
+echo '***********************************************************************************'
+
+MEM_AMT=`free -m |grep Mem: |awk '{print $2}'`
+##     MEM_AMT='10 MB'
+echo "Total RAM for server $SERVER is $MEM_AMT Meg."
+echo "Total RAM for server $SERVER is $MEM_AMT Meg." >> $SVR_REBOOT_CHK_LOG
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+GET_FILESYSTEMS()
+{
+
+echo '***********************************************************************************'
+echo "Get count of mounted filesystems on this node"
+echo '***********************************************************************************'
+
+FS_CNT=`df |grep " /" |wc -l`
+FILESYSTEMS=`df -Ph |grep -v Filesystem|awk '{print $6}'`
+##     FS_CNT=10
+echo "Total count of filesystems for server $SERVER is $FS_CNT."
+echo "The filesystems are: "
+echo "$FILESYSTEMS"
+echo "Total count of filesystems for server $SERVER is $FS_CNT." >> $SVR_REBOOT_CHK_LOG
+echo "The filesystems are: " >> $SVR_REBOOT_CHK_LOG
+echo "$FILESYSTEMS" >> $SVR_REBOOT_CHK_LOG
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+GET_PAGING_SPACE()
+{
+
+echo '***********************************************************************************'
+echo "Get the amount of paging/swap space on this node"
+echo '***********************************************************************************'
+
+PS_SZ=`free -m |grep Swap: |awk '{print $2}'`
+##     PS_SZ='10 MB'
+echo "Swap Space for Server $SERVER has $PS_SZ Meg."
+echo "Swap Space for Server $SERVER has $PS_SZ Meg." >> $SVR_REBOOT_CHK_LOG
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+DIFF_SVR_FILES()
+{
+
+echo '***********************************************************************************'
+echo "Compare the current and previous OS Configurations and email if different"
+echo '***********************************************************************************'
+
+if [[ $V_TYP = 'NETEZZA' ]]
+then
+   SVR_REBOOT_CHK_LOG="$LOGS/server_diff_check_${SERVER}_${TME_STMP}.log"
+   LAST_CONFIG=`ls -tr $LOGS/server_diff_check_${SERVER}*log |tail -2 |head -1`
+else
+   SVR_REBOOT_CHK_LOG="$LOGS/server_diff_check_${SERVER}_${TME_STMP}.log"
+   LAST_CONFIG=`ls -tr $LOGS/server_diff_check_${SERVER}*log |tail -2 |head -1`
+fi
+
+echo "Previous server configuration settings are in $LAST_CONFIG" >> $TEMPMAIL
+echo >> $TEMPMAIL
+cat $LAST_CONFIG >> $TEMPMAIL
+
+echo >> $TEMPMAIL
+echo >> $TEMPMAIL
+if [[ $V_TYP = 'NETEZZA' ]]
+then
+   CURRENT_CONFIG=`ls -tr $LOGS/server_diff_check_${SERVER}*log |tail -1`
+else
+   CURRENT_CONFIG=`ls -tr $LOGS/server_diff_check_${SERVER}*log |tail -1`
+fi
+
+echo "Current server configuration settings are in $CURRENT_CONFIG" >> $TEMPMAIL
+echo >> $TEMPMAIL
+cat $CURRENT_CONFIG >> $TEMPMAIL
+
+echo >> $TEMPMAIL
+echo >> $TEMPMAIL
+
+echo "Differences are:" >> $TEMPMAIL
+echo >> $TEMPMAIL
+
+diff $LAST_CONFIG $CURRENT_CONFIG >> $TEMPMAIL
+DIFF_RSP=$?
+
+if [[ $DIFF_RSP -gt 0 ]]
+  then
+    echo >> $TEMPMAIL
+    SEND_EMAIL
+    echo
+##    cat $TEMPMAIL
+fi
+
+echo
+
+}
+################################################################################
+##  Cleanup temporary files
+################################################################################
+CLEANUP()
+{
+
+rm $TEMPMAIL
+find $LOGS -name "server_diff_check_${SERVER}*log" -mtime +5 -exec rm {} \;
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+SEND_EMAIL()
+{
+
+if [[ $V_TYP = 'NETEZZA' ]]
+then
+   /nz/support/bin/SendEvent -to $MAILNOTIFY -subject "SERVER_DIFF_CHECK found differences in server configuration for server $SERVER. Please Validate" -bodyFile $TEMPMAIL
+else
+   MAILSUBJECT="SERVER_DIFF_CHECK found differences in server configuration for server $SERVER. Please Validate"
+   cat $TEMPMAIL | mail -s "${MAILSUBJECT}" ${MAILNOTIFY}
+fi
+
+}
+################################################################################
+################################################################################
+################################################################################
+##################################### MAIN #####################################
+################################################################################
+################################################################################
+################################################################################
+
+PGMDIR=$(cd $(dirname $(whence $0)); pwd)
+
+Usage="\n
+
+Description: This script check for key items on a server.  If any of thos items change from \n
+             day to day, an Email alert will be sent out.\n\n
+(Version: $VERSION)\n
+\n
+
+Usage: $(basename $0) [ -T ] [ -D ] [ -L ] [ -P ] [ -S ] [ -E ] [ -F ]\n
+
+where:\n
+        \t-T    Type of System (Netezza or Informatica) \n
+        \t\tExample (-T NETEZZA)\n
+        \t\t\tNETEZZA     = Netezza Server\n
+        \t\t\tINFORMATICA = Informatica Server \n
+\n
+Examples \n
+\tRun script in a Netezza Server.\n
+\t\t./Server_diff_check.ksh -T NETEZZA \n
+\tRun script in a Informatica Server.\n
+\t\t./Server_diff_check.ksh -T INFORMATICA \n
+"
+
+################################################################################
+# Write error message and exit.
+OnError()  { # $* = message to write
+
+        echo "\n$*\n" >&2
+        exit 1
+}
+
+################################################################################
+## Process command line arguments
+unset ERR
+
+# Interrogate Input parameters.
+if (($# > 1))
+  then
+    while  getopts :T: cmdopts
+    do
+        case $cmdopts in
+#          L)    INT_LOG=Y ;;
+          T)    V_TYP=`echo $OPTARG| tr a-z A-Z` ;;
+          \?)   echo "\"-$OPTARG\" is not a valid switch" >&2
+                sleep 5 ;
+                print $Usage ;
+                exit 1 ;;
+        esac
+    done
+else
+  print $Usage
+  exit 1
+fi
+
+if [[ $V_TYP = 'NETEZZA' ]] || [[ $V_TYP = 'INFORMATICA' ]]
+then
+   continue
+else
+   echo "$V_TYP in not valid.  Please specify a valid Type of System"
+   sleep 5
+   print $Usage
+   exit 1
+fi
+
+if [[ $V_TYP = 'NETEZZA' ]]
+then
+   . /export/home/nz/nz.config
+else
+   . /home/infa901/nz.config
+fi
+
+SET_ENVIRONMENT_VARIABLES
+
+################################################################################
+################################################################################
+##  All executions of functions should be placed here
+################################################################################
+################################################################################
+
+GET_CPU_COUNT
+GET_MEMORY
+GET_FILESYSTEMS
+GET_PAGING_SPACE
+
+DIFF_SVR_FILES
+
+
+## DUG ## ## DUG ## TEMPORARY FOR TESTING ##
+## DUG ## echo "OUTPUT FROM THE SERVER FILE"
+echo
+cat $TEMPMAIL
+
+## DUG ## CLEANUP
+
+################################################################################
+##  end of Server_diff_check.ksh
+################################################################################

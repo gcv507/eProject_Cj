@@ -1,0 +1,67 @@
+set -x
+if [ $# -ne "6" ];
+then
+   echo "Usage : $0 <DBUSERNAME> <DBPASSWD> <DBSCHEMANAME> <DBSERVICENAME> <FOLDERNAME> <your FIRST NAME>"
+   echo "For example: $0 <hrdcuser> <hrdcpass> <hrdc> <hrdctest> <Benefits> <Vijay>"
+exit 2
+fi
+
+
+
+USERNAME=$1
+PASSWORD=$2
+DBSCHEMANAME=$3
+DBSERVICENAME=$4
+FOLDERNAME=$5
+YOUR_FIRST_NAME=$6
+timestamp=`date +%m%d%Y`
+TEMPFILE=$DB.$timestamp
+ODBCFILE=odbc.ini
+UPPER_DBSCHEMANAME=`echo $DBSCHEMANAME | tr "[a-z]" "[A-Z]"`
+CONNECTIONNAME=ORA_$UPPER_DBSCHEMANAME
+UPPER_DBSERVICENAME=`echo $DBSERVICENAME | tr "[a-z]" "[A-Z]"`
+CONNECTSTRING=$UPPER_DBSERVICENAME
+TNSNAMES_HOME=$ORACLE_BASE/product/11.2.0/client/network/admin/
+
+GROUP_DBA=DBA_Group
+GROUP_RM=Release_Managers
+var1="_Developers"
+GROUP_DEV=$FOLDERNAME$var1
+var2="_Support"
+GROUP_SUP=$FOLDERNAME$var2
+echo "please verify the information, you got 1 minute. If it is incorrect, press Control C or Z else sit back and watch the screen"
+
+echo "DBUSERNAME:$USERNAME , DBPASSWD:$PASSWORD , DBSCHEMANAME:$DBSCHEMANAME , DBSERVICENAME:$DBSERVICENAME , FOLDERNAME:$FOLDERNAME , FIRST NAME:$YOUR_FIRST_NAME"
+#sleep 60
+
+echo "Time's up"
+
+#---------------------------------------------------------#
+# Checking tnsnames.ora file for the service name entry
+#---------------------------------------------------------#
+
+SERVICE_EXISTS=`cat $TNSNAMES_HOME/tnsnames.ora | grep "SERVICE_NAME" | grep $DBSERVICENAME |wc -l`
+if [ $SERVICE_EXISTS = 0 ] ; then
+echo "Oracle Service Name doesn't exist in $TNSNAMES_HOME/tnsnames.ora"
+exit $SERVICE_EXISTS
+echo $SERVICE_EXISTS
+fi
+echo $SERVICE_EXISTS
+#---------------------------------------------------------------#
+# testing connection
+#--------------------------------------------------------------#
+CONN_STATUS=`sqlplus -s $USERNAME/$PASSWORD@$DBSERVICENAME   << EOF
+        set pagesize 0
+        set feedback off
+        set verify off
+        set heading off
+        select '0' as S from dual;
+        exit;
+        EOF`
+if [ $CONN_STATUS != 0 ] ; then
+echo "Oracle Connection Test failed, please check user, password and other information and retry"
+exit $CONN_STATUS
+echo $CONN_STATUS
+fi
+echo $CONN_STATUS
+exit 0

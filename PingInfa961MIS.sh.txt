@@ -1,0 +1,27 @@
+#...............................................................
+# Ping Informatica 9.6.1 Integration Services for Metadata Manager
+#
+# Created by: Vijayanand Silvary
+# Created on: November 04, 2011
+# Purpose: To be called by Oracle EM UDM
+#...............................................................
+
+INFA_HOME=/apps/informatica/infa_bin/961
+INFA_DOMAIN=Domain_Dev_TWDIP
+INFA_PCIS=MIS_Dev_TWDIP
+INFA_TIMEOUT=180
+
+#$INFA_HOME/server/bin/pmrep version
+
+echo ""
+$INFA_HOME/isp/bin/infacmd.sh ping -dn $INFA_DOMAIN -sn $INFA_PCIS -re $INFA_TIMEOUT
+
+OUT=`expr $?`
+
+if [ "$OUT" -eq 0 ]; then
+        echo -e "em_result=$OUT\nem_message=Informatica Integration Service for Metadata Manager is Up\n"
+else
+        echo -e "em_result=$OUT\nem_message=Informatica Integration Service for Metadata Manager is Down\n"
+fi
+
+exit

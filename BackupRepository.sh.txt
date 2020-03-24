@@ -1,0 +1,57 @@
+#...............................................................
+# Backup Repository Script
+#
+# This script will backup the PowerCenter Repository to
+# $INFA_SHARED/Backup folder
+#
+# Created by: Keshav Vadrevu, IPS
+# Created on: March 22, 2011
+# Modified by: Vijayanand Silvary
+# Modified on: October 3, 2011
+#...............................................................
+source /home/infa951/.bash_profile
+set -x
+RUN_USER=`whoami`
+if [ $RUN_USER = 'infaadmn' ] ; then
+temp_var=1
+else
+echo "Warning!! You cannot execute this script with the current user. Please login as infaadmn and execute this script"
+exit -1
+fi
+
+BACKUP_DIR=$INFA_SHARED/Backup
+timestamp=`date +%m%d%Y`
+BACKUP_FILE=$INFA_PCREP.$timestamp
+find $BACKUP_DIR -name "$INFA_PCREP.*.gz" -mtime \+14 -exec rm -f {} \;
+clear
+echo "
+...............................................................
+PowerCenter Repository Backup Process
+...............................................................
+
+     Domain Name: $INFA_DOMAIN
+     Repository: $INFA_PCREP
+     Backup Dir: $BACKUP_DIR
+...............................................................
+
+Please wait...
+
+"
+
+
+pmrep connect -r $INFA_PCREP -d $INFA_DOMAIN -n $INFA_MAINTENANCE_USER -x $INFA_MAINTENANCE_PASS
+
+pmrep Backup -o $BACKUP_DIR/$BACKUP_FILE -f -b -q
+
+
+RC=$?
+if [ $RC != 0 ] ; then
+echo "$INFA_PCREP backup failed" | mailx -s "Alert! Informatica Dev Repository backup failed" kumara.made@timewarner.com
+fi
+
+pmrep cleanup
+
+gzip $BACKUP_DIR/$BACKUP_FILE
+
+exit 0
+~

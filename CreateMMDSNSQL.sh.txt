@@ -1,0 +1,96 @@
+if [ $# -ne "4" ];
+then
+   echo "Usage : $0 <DBNAME> <DBSERVERNAME> <DBPORT> <your FIRST NAME>"
+   echo "For example: $0 sungard dbsungard.dev.twi.com 1433 Vijay"
+exit 2
+fi
+
+
+
+DBNAME=$1
+DBSERVER=$2
+DBPORT=$3
+YOUR_FIRST_NAME=$4
+timestamp=`date +%m%d%Y`
+TEMPFILE=$INFA_SHARED/$DBNAME.$timestamp
+ODBCFILE=$HOME/.odbc.ini
+UPPER_DBNAME=`echo $DBNAME | tr "[a-z]" "[A-Z]"`
+CONNECTIONNAME=SQL_$UPPER_DBNAME
+CONNECTSTRING=$UPPER_DBNAME
+
+
+echo "please verify the information, you got 1 minute. If it is incorrect, press Control C or Z else sit back and watch the screen"
+
+echo "DBNAME:$DBNAME , DBSERVERNAME:$DBSERVER , DBPORT:$DBPORT , FIRST NAME:$YOUR_FIRST_NAME"
+sleep 60
+
+echo "Time's up"
+var=`cat $ODBCFILE | grep $CONNECTSTRING`
+var2=[$CONNECTSTRING]
+if [ "$var" != "$var2" ] ; then
+
+echo " " > $TEMPFILE
+echo "#Added by $YOUR_FIRST_NAME $timestamp"  >> $TEMPFILE
+echo "[@$CONNECTSTRING]"  >> $TEMPFILE
+echo "Driver=/apps/informatica/910/ODBC6.1/lib/DWsqls25.so"  >> $TEMPFILE
+echo "Description=DataDirect 6.1 SQL Server Native Wire Protocol"  >> $TEMPFILE
+echo "Address=$DBSERVER,$DBPORT"  >> $TEMPFILE
+echo "AlternateServers="  >> $TEMPFILE
+echo "AlwaysReportTriggerResults=0"  >> $TEMPFILE
+echo "AnsiNPW=1"  >> $TEMPFILE
+echo "ApplicationName="  >> $TEMPFILE
+echo "ApplicationUsingThreads=1"  >> $TEMPFILE
+echo "AuthenticationMethod=1"  >> $TEMPFILE
+echo "BulkBinaryThreshold=32"  >> $TEMPFILE
+echo "BulkCharacterThreshold=-1"  >> $TEMPFILE
+echo "BulkLoadBatchSize=1024"  >> $TEMPFILE
+echo "BulkLoadOptions=2"  >> $TEMPFILE
+echo "ConnectionReset=0"  >> $TEMPFILE
+echo "ConnectionRetryCount=0"  >> $TEMPFILE
+echo "ConnectionRetryDelay=3"  >> $TEMPFILE
+echo "Database=$DBNAME"  >> $TEMPFILE
+echo "EnableBulkLoad=0"  >> $TEMPFILE
+echo "EnableQuotedIdentifiers=0"  >> $TEMPFILE
+echo "EncryptionMethod=0"  >> $TEMPFILE
+echo "FailoverGranularity=0"  >> $TEMPFILE
+echo "FailoverMode=0"  >> $TEMPFILE
+echo "FailoverPreconnect=0"  >> $TEMPFILE
+echo "FetchTSWTZasTimestamp=0"  >> $TEMPFILE
+echo "FetchTWFSasTime=1"  >> $TEMPFILE
+echo "GSSClient=native"  >> $TEMPFILE
+echo "#HostName=<SQL_Server_host>"  >> $TEMPFILE
+echo "HostNameInCertificate="  >> $TEMPFILE
+echo "InitializationString="  >> $TEMPFILE
+echo "Language="  >> $TEMPFILE
+echo "LoadBalanceTimeout=0"  >> $TEMPFILE
+echo "LoadBalancing=0"  >> $TEMPFILE
+echo "LoginTimeout=15"  >> $TEMPFILE
+echo "LogonID="  >> $TEMPFILE
+echo "MaxPoolSize=100"  >> $TEMPFILE
+echo "MinPoolSize=0"  >> $TEMPFILE
+echo "PacketSize=-1"  >> $TEMPFILE
+echo "Password="  >> $TEMPFILE
+echo "Pooling=0"  >> $TEMPFILE
+echo "#PortNumber=<SQL_Server_server_port>"  >> $TEMPFILE
+echo "QueryTimeout=0"  >> $TEMPFILE
+echo "ReportCodePageConversionErrors=0"  >> $TEMPFILE
+echo "SnapshotSerializable=0"  >> $TEMPFILE
+echo "TrustStore="  >> $TEMPFILE
+echo "TrustStorePassword="  >> $TEMPFILE
+echo "ValidateServerCertificate=1"  >> $TEMPFILE
+echo "WorkStationID="  >> $TEMPFILE
+echo "XML Describe Type=-10"  >> $TEMPFILE
+
+cat $TEMPFILE >> $ODBCFILE
+if [ $? = 0 ];
+then
+echo "$CONNECTSTRING DSN successfully added to .odbc.ini file"
+else
+echo "Failed to add $CONNECTSTRING DSN to .odbc.ini file"
+exit 1
+fi
+rm $TEMPFILE
+
+fi
+
+exit 0

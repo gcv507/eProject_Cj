@@ -1,0 +1,6 @@
+#Start TDM Service
+
+echo "Starting TDM Service"
+cd $TDM_HOME
+nohup startILM.sh &
+exit

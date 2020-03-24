@@ -1,0 +1,199 @@
+#!/bin/ksh
+#set -xv
+
+################################################################################
+##
+##      Netezza_Availability.ksh --
+##
+################################################################################
+VERSION="Netezza_Availability.ksh v1.00 01/24/2013"
+## Doug Huser 02/14/2013 - new
+################################################################################
+##  All functions for Netezza_Availability.ksh should be placed here
+################################################################################
+
+################################################################################
+##
+################################################################################
+GET_DATABASE_LIST()
+{
+
+echo "#############################################################################################"
+echo "# Running GET_DATABASE_LIST "
+echo "#############################################################################################"
+echo
+
+nzsql -host $NZ_HOST -db system -u $NZ_AVAIL_ID -pw $NZ_AVAIL_PWD -c "select datname, datallowconn from _t_database where datallowconn != 'f'" -t |awk '{print $1}' >/tmp/Netezza_Availability_DB_LIST
+DB_LIST_RSP=`wc -l /tmp/Netezza_Availability_DB_LIST |awk '{print $1}'`
+if [[ $DB_LIST_RSP -gt 1 ]]
+then
+   echo "Database list gererated.  Checking availability"
+   echo
+   for DB in `cat /tmp/Netezza_Availability_DB_LIST`
+   do
+      TBL_CNT=`nzsql -host $NZ_HOST -db $DB -u $NZ_AVAIL_ID -pw $NZ_AVAIL_PWD -c "select count(*) from _v_table" -t`
+      SEL_RSP=$?
+      if [[ $SEL_RSP -gt 0 ]]
+      then
+         echo "Database $DB is not accessible!! PLEASE INVESTIGATE ASAP!!!!!"
+         echo "Database $DB is not accessible!! PLEASE INVESTIGATE ASAP!!!!!" >/tmp/NZ_Avail
+         cat /tmp/NZ_Avail | mail -s "Database $DB is not accessible!! PLEASE INVESTIGATE ASAP!!!!!" $MAIL_LIST
+         rm /tmp/NZ_Avail
+      else
+         echo "Database $DB - View _V_TABLE has $TBL_CNT rows"
+      fi
+   done
+else
+   echo "Netezza is not accessible on Server $NZ_HOST!! PLEASE INVESTIGATE ASAP!!!!!"
+   echo "Netezza is not accessible on Server $NZ_HOST!! PLEASE INVESTIGATE ASAP!!!!!" >/tmp/NZ_Avail
+   cat /tmp/NZ_Avail | mail -s "Netezza is not accessible on Server $NZ_HOST!! PLEASE INVESTIGATE ASAP!!!!!" $MAIL_LIST
+   rm /tmp/NZ_Avail
+fi
+
+echo
+
+}
+################################################################################
+##
+################################################################################
+CLEANUP()
+{
+
+echo "#############################################################################################"
+echo "# Running CLEANUP "
+echo "#############################################################################################"
+echo
+
+rm /tmp/Netezza_Availability_DB_LIST
+find ${LOGS}/ -iname "Netezza_Availability_*log" -mtime +1 -exec rm -f {} \;
+
+}
+################################################################################
+################################################################################
+################################################################################
+##################################### MAIN #####################################
+################################################################################
+################################################################################
+################################################################################
+
+PGMDIR=$(cd $(dirname $(whence $0)); pwd)
+
+Usage="\n
+
+Description: This script Connects to Every Netezza database and verifys that it is \n
+             available.  It does this by doing a simple select count(*) from _v_table.\n
+             If it does not return a count > 0, an alert is sent out.\n\n
+(Version: $VERSION)\n
+\n
+Usage: $(basename $0) [ -E ] [ -L ] \n
+
+where:\n
+        \t-E    Environment to run against (PROD, NONPROD, or ALL) \n
+        \t\t\tPROD = Check availability on All PRODUCTION databases\n
+        \t\t\tNONPROD = Check availability on All NON PRODUCTION databases\n
+        \t\t\tALL = Check availability on All PRODUCTION and NON PRODUCTION databases\n
+        \t-L    Send ALL output to \$LOGS/Netezza_Availability_<Date>.log.   If this parameter is ommitted all output will go to Standard out.\n
+\n
+Examples: \n\n
+\tRun the script against all PRODUCTION databases \n
+\t\t./Netezza_Availability.ksh -E PROD -L \n
+\tRun the script against all NON PRODUCTION databases \n
+\t\t./Netezza_Availability.ksh -E NONPROD -L \n
+\tRun the script against all PRODUCTION and NON PRODUCTION databases \n
+\t\t./Netezza_Availability.ksh -E ALL -L \n
+"
+
+################################################################################
+# Write error message and exit.
+OnError()  { # $* = message to write
+
+        echo "\n$*\n" >&2
+        exit 1
+}
+
+################################################################################
+## Process command line arguments
+unset ERR
+
+# Interrogate Input parameters.
+if (($# > 1))
+  then
+    while  getopts :LE: cmdopts
+    do
+        case $cmdopts in
+          L)    INT_LOG=Y ;;
+          E)    V_ENV=`echo $OPTARG|tr a-z A-Z` ;;
+          \?)   echo "\"-$OPTARG\" is not a valid switch" >&2
+                sleep 5 ;
+                print $Usage ;
+                exit 1 ;;
+        esac
+    done
+else
+  print $Usage
+  exit 1
+fi
+
+## DUG ## . /home/infa901/huserd/GECS_Job.config
+
+SERVER=`hostname`
+MAIL_LIST='TWDANTZSupport@timewarner.com,manish.gupta@timewarner.com'
+## MAIL_LIST='douglas.huser@timewarner.com'
+LOGS=/u01/apps/twnycddip/AdminScripts/Logs
+
+## DUG ## ## export PATH=$PATH:/opt/nzclient/bin/
+## DUG ## ## export LD_LIBRARY_PATH=/opt/nzclient/lib/
+export PATH=$PATH:/apps/informatica/nz605/netezza/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/apps/informatica/nz605/netezza/lib
+
+
+# Set date parameters.
+TME_STMP=`date +%Y%m%d_%H%M`
+
+# Direct output to log file if parm -L was provided.
+if [[ $INT_LOG = 'Y' ]]
+then
+   ERROR_LOG=$LOGS/Netezza_Availibility_${TME_STMP}.log
+   exec 1>> ${ERROR_LOG} 2>&1
+fi
+
+if [ $V_ENV = 'PROD' ]
+then
+   echo "Valid Environment Variable $V_ENV"
+   NZ_AVAIL_ID=nzpldapdbmonid
+   NZ_AVAIL_PWD=P_avail_13579
+   NZ_HOST=twnetezzap.twi.com
+   GET_DATABASE_LIST
+elif [ $V_ENV = 'NONPROD' ]
+then
+   echo "Valid Environment Variable $V_ENV"
+   NZ_AVAIL_ID=nzdevdbmonid2
+   NZ_AVAIL_PWD=Mon2Db_PMdon7
+   NZ_HOST=twnetezzad.dev.twi.com
+   GET_DATABASE_LIST
+elif [ $V_ENV = 'ALL' ]
+then
+   echo "Valid Environment Variable $V_ENV"
+   NZ_AVAIL_ID=nzpldapdbmonid
+   NZ_AVAIL_PWD=P_avail_13579
+   NZ_HOST=twnetezzap.twi.com
+   GET_DATABASE_LIST
+   NZ_AVAIL_ID=nzdevdbmonid2
+   NZ_AVAIL_PWD=Mon2Db_PMdon7
+   NZ_HOST=twnetezzad.dev.twi.com
+   GET_DATABASE_LIST
+else
+   echo
+   echo "Environment Variable $V_ENV is NOT VALID"
+   print $Usage
+   exit 1
+fi
+
+CLEANUP
+
+exit 0
+
+################################################################################
+##  end of Netezza_Availability.ksh
+################################################################################
+

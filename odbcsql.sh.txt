@@ -1,0 +1,83 @@
+set -x
+USERNAME=$1
+PASSWORD=$2
+DBNAME=$3
+DBSERVER=$4
+DBPORT=$5
+YOUR_FIRST_NAME=$6
+timestamp=`date +%m%d%Y`
+TEMPFILE=$DB.$timestamp
+
+echo "#Added by $YOUR_FIRST_NAME $timestamp"  > $TEMPFILE
+echo "[$DBNAME]"  >> $TEMPFILE
+echo "Driver=/apps/informatica/infa_bin/961/ODBC7.1/lib/DWsqls27.so"  >> $TEMPFILE
+echo "Description=DataDirect 7.1 SQL Server Native Wire Protocol"  >> $TEMPFILE
+echo "Address=$DBSERVER,$DBPORT"  >> $TEMPFILE
+echo "AlternateServers="  >> $TEMPFILE
+echo "AlwaysReportTriggerResults=0"  >> $TEMPFILE
+echo "AnsiNPW=1"  >> $TEMPFILE
+echo "ApplicationName="  >> $TEMPFILE
+echo "ApplicationUsingThreads=1"  >> $TEMPFILE
+echo "AuthenticationMethod=1"  >> $TEMPFILE
+echo "BulkBinaryThreshold=32"  >> $TEMPFILE
+echo "BulkCharacterThreshold=-1"  >> $TEMPFILE
+echo "BulkLoadBatchSize=1024"  >> $TEMPFILE
+echo "BulkLoadOptions=2"  >> $TEMPFILE
+echo "ConnectionReset=0"  >> $TEMPFILE
+echo "ConnectionRetryCount=0"  >> $TEMPFILE
+echo "ConnectionRetryDelay=3"  >> $TEMPFILE
+echo "Database=$DBNAME"  >> $TEMPFILE
+echo "EnableBulkLoad=0"  >> $TEMPFILE
+echo "EnableQuotedIdentifiers=0"  >> $TEMPFILE
+echo "EncryptionMethod=0"  >> $TEMPFILE
+echo "FailoverGranularity=0"  >> $TEMPFILE
+echo "FailoverMode=0"  >> $TEMPFILE
+echo "FailoverPreconnect=0"  >> $TEMPFILE
+echo "FetchTSWTZasTimestamp=0"  >> $TEMPFILE
+echo "FetchTWFSasTime=1"  >> $TEMPFILE
+echo "GSSClient=native"  >> $TEMPFILE
+echo "#HostName=<SQL_Server_host>"  >> $TEMPFILE
+echo "HostNameInCertificate="  >> $TEMPFILE
+echo "InitializationString="  >> $TEMPFILE
+echo "Language="  >> $TEMPFILE
+echo "LoadBalanceTimeout=0"  >> $TEMPFILE
+echo "LoadBalancing=0"  >> $TEMPFILE
+echo "LoginTimeout=15"  >> $TEMPFILE
+echo "LogonID="  >> $TEMPFILE
+echo "MaxPoolSize=100"  >> $TEMPFILE
+echo "MinPoolSize=0"  >> $TEMPFILE
+echo "PacketSize=-1"  >> $TEMPFILE
+echo "Password="  >> $TEMPFILE
+echo "Pooling=0"  >> $TEMPFILE
+echo "#PortNumber=<SQL_Server_server_port>"  >> $TEMPFILE
+echo "QueryTimeout=0"  >> $TEMPFILE
+echo "ReportCodePageConversionErrors=0"  >> $TEMPFILE
+echo "SnapshotSerializable=0"  >> $TEMPFILE
+echo "TrustStore="  >> $TEMPFILE
+echo "TrustStorePassword="  >> $TEMPFILE
+echo "ValidateServerCertificate=1"  >> $TEMPFILE
+echo "WorkStationID="  >> $TEMPFILE
+echo "XML Describe Type=-10"  >> $TEMPFILE
+
+#-------------------------------------------------------------------#
+# Connecting to Repository
+#-------------------------------------------------------------------#
+
+echo "Connecting to Repository"
+
+pmrep connect -r $INFA_PCREP -d $INFA_DOMAIN -n $INFA_MAINTENANCE_USER -s $INFA_SEC_DOMAIN -x $INFA_MAINTENANCE_PASS
+
+if [ $? = 0 ];
+then
+echo "Connected to Repository Successfull"
+else
+echo "Failed to Connect to Repository"
+exit 1
+fi
+
+#-------------------------------------------------------------------#
+# Creating Relational Connection
+#-------------------------------------------------------------------#
+pmrep createconnection -s "ODBC" -n SQL_$DBNAME -u $USERNAME -p $PASSWORD -c $DBNAME -l "UTF-8 encoding of Unicode"
+
+exit 0

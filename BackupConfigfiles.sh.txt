@@ -1,0 +1,64 @@
+#...............................................................
+# Config Files backup Script
+#
+# This script will backup the Informatica and DB configuration files to
+# $INFA_SHARED/Backup folder
+#
+# Created by: Vijayanand Silvary
+# Created on: October 3, 2011
+#...............................................................
+RUN_USER=`whoami`
+if [ $RUN_USER = 'infa951' ] ; then
+temp_var=1
+else
+echo "Warning!! You cannot execute this script with the current user. Please login as infa951 and execute this script"
+exit -1
+fi
+
+BACKUP_DIR=$INFA_SHARED/Backup/configfiles
+timestamp=`date +%m%d%Y`
+find $BACKUP_DIR -name "domains.infa.*" -mtime \+14 -exec rm -f {} \;
+find $BACKUP_DIR -name "odbc.ini.*" -mtime \+14 -exec rm -f {} \;
+find $BACKUP_DIR -name "tnsnames.ora.*" -mtime \+14 -exec rm -f {} \;
+find $BACKUP_DIR -name "app_profile.*" -mtime \+14 -exec rm -f {} \;
+find $BACKUP_DIR -name "bash_profile.*" -mtime \+14 -exec rm -f {} \;
+clear
+echo "
+...............................................................
+PowerCenter Domain Backup Process
+...............................................................
+
+     Config files: tnsnames, .odbc.ini, domains.infa, .app_profile, .bash_profile
+     Backup Dir: $BACKUP_DIR
+...............................................................
+
+Please wait...
+"
+cp $INFA_HOME/domains.infa $BACKUP_DIR/domains.infa.$timestamp
+cp $HOME/.odbc.ini $BACKUP_DIR/odbc.ini.$timestamp
+cp $ORACLE_HOME/network/admin/tnsnames.ora $BACKUP_DIR/tnsnames.ora.$timestamp
+cp $HOME/.app_profile $BACKUP_DIR/app_profile.$timestamp
+cp $HOME/.bash_profile $BACKUP_DIR/bash_profile.$timestamp
+chmod 700 $BACKUP_DIR/domains.infa.$timestamp
+chmod 700 $BACKUP_DIR/odbc.ini.$timestamp
+chmod 700 $BACKUP_DIR/tnsnames.ora.$timestamp
+chmod 700 $BACKUP_DIR/app_profile.$timestamp
+chmod 700 $BACKUP_DIR/bash_profile.$timestamp
+
+exit 0
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+"BackupConfigfiles.sh" 48L, 1852C  
